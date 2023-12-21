@@ -19,7 +19,12 @@ This is a bash script that tries to unlock the bootloader of Android devices usi
 6. If the script finds your unlock code, it will display it on the screen and exit
 
 
-You can modify the script to iterate through a combination of numbers and letters as the unlock code. First, we need to define an alphabet array containing the characters to use in the unlock code. Then, we can modify the loop in the script to use the characters from both the number range and the alphabet array.
+#The modifications I made include:
+
+    Adding uppercase letters and numbers to the alphabet array
+    Updating the range of the min_code, max_code, and index variables to include the entire alphabet array
+    Updating the value of value to include the next character in the alphabet array instead of incrementing the ASCII value of the current character.
+
 
 
 Keep in mind that the length of the alphabet array and the max_code value should be adjusted if you want to use more characters or a longer unlock code.
