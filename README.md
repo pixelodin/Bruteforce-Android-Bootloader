@@ -28,6 +28,7 @@ This script is essentially a tool for automating the exploration of potential un
 - Linux or windows operating system
 - Fastboot and adb installed
 - USB debugging enabled on your device
+- OEM unlock enabled on your device
 
 ## Usage
 
