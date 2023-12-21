@@ -1,0 +1,94 @@
+#!/bin/bash
+
+# Function to display progress bar
+function progress_bar {
+    echo -ne "\rKey: $1 [###########] $2"
+    ((progress++))
+    if [ $progress -ge 100 ]; then
+        progress=0
+        echo -ne "\rKey: $1 [###########] $2"
+    fi
+}
+
+# Function to save progress
+function save_progress {
+    printf "\nSaving progress..."
+    printf "%s" "${value}" > "${devfile}"
+}
+
+trap 'save_progress; exit' EXIT
+
+# Get device name from fastboot
+devices=$(fastboot devices)
+device="${devices:0:${#devices}-1}"
+echo "Current device: $device"
+
+# Create file name based on device name
+devfile="./$device.dat"
+
+# Define the alphabet for the unlock code
+alphabet=(0 1 2 3 4 5 6 7 8 9 a b c d e f)
+
+# Define the range and pattern of unlock codes
+min_code=0
+max_code=255
+step=1
+
+# Initialize the value string
+value=""
+
+if [ ! -f "$devfile" ]; then
+    value="${alphabet[min_code]}"
+else
+    read -r value < "$devfile"
+
+    # Find the index of the current value in the alphabet array
+    index=$(printf '%s\n' "${alphabet[@]}" | grep -n -x "$value" | cut -d: -f1)
+
+    # Set the initial value to the next value after the last saved one
+    (( index += step ))
+
+    # Set the initial value if the index goes beyond the array length
+    if [ $index -ge ${#alphabet[@]} ]; then
+        index=$min_code
+    fi
+
+    # Set the initial value
+    value=${alphabet[$index]}
+fi
+
+# Check if device is in bootloader mode
+if [[ $(fastboot getvar unlocked) != *"True"* ]]; then
+    while [ $index -lt ${#alphabet[@]} ]; do
+        # Display progress bar
+        progress_bar "$device" "Searching for unlock code"
+
+        # Get the current bootloader unlock warning
+        warning=$(fastboot getvar unlock-allowed)
+
+        # Check if the device is in the "UNLOCK THE BOOTLOADER" screen
+        if [[ "$warning" == *"True"* ]]; then
+            # Try to unlock device with fastboot
+            output=$(fastboot oem unlock ${value} 2>&1)
+
+            # Check if unlock code was found
+            if [[ "$output" != *"FAILED"* ]]; then
+                printf "\nYour unlock code is: %s\n" "${value}"
+                printf "Saving unlock code to $devfile..."
+                save_progress
+                break
+            fi
+        fi
+
+        # Increment value for next try
+        (( index += step ))
+
+        # Set the value to the next character in the alphabet array
+        value=${alphabet[$index]}
+
+        # Reset the index if it goes beyond the array length
+        if [ $index -ge ${#alphabet[@]} ]; then
+            index=$min_code
+        fi
+    done
+fi
