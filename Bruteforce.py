@@ -1,88 +1,50 @@
-#!/usr/bin/env python3
-
 import subprocess
-import time
+import itertools
 
-# Function to display progress bar
 def progress_bar(device, key, progress, length):
-    print(f"\rKey: {key} [{key[:length]}]{'#' * progress}", end='')
-    time.sleep(0.01)
+    print(f"\rKey: {key} [{'#' * progress}{' ' * (length - progress)}] {device}", end='', flush=True)
 
-# Function to save progress
 def save_progress(device, value):
+    print("\nSaving progress...")
     with open(f"./{device}.dat", "w") as f:
         f.write(value)
 
-# Function to load progress
-def load_progress(device):
+def is_unlock_allowed(device):
     try:
-        with open(f"./{device}.dat", "r") as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        return ""
+        output = subprocess.check_output(["fastboot", "getvar", "unlock-allowed"], text=True)
+        return "True" in output
+    except subprocess.CalledProcessError:
+        return False
 
-# Get device name from fastboot
-devices = subprocess.run(["fastboot", "devices"], capture_output=True, text=True)
-device = devices.strip()
-if not device:
-    print("No device found")
-    exit()
+def main():
+    devices_raw = subprocess.run(["fastboot", "devices"], capture_output=True, text=True)
+    devices = devices_raw.stdout.strip().split('\n')
+    if not devices:
+        print("No device found")
+        exit()
 
-# Create file name based on device name
-devfile = f"./{device}.dat"
+    device = devices[0]
+    print(f"Current device: {device}")
 
-# Define the alphabet for the unlock code
-alphabet = (
-    "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
-    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
-)
+    devfile = f"./{device}.dat"
+    charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    min_length = 1
+    max_length = 30  # Adjust the max length as needed
+    value = ""
 
-# Define the range and pattern of unlock codes
-min_code = 0
-max_code = len(alphabet) - 1
-step = 1
+    if not is_unlock_allowed(device):
+        for length in range(min_length, max_length + 1):
+            combinations = itertools.product(charset, repeat=length)
+            for combination in combinations:
+                value = ''.join(combination)
+                progress_bar(device, "Searching for unlock code", 0, 100)  # Reset progress bar
+                if is_unlock_allowed(device):
+                    output = subprocess.run(["fastboot", "oem", "unlock", value], capture_output=True, text=True)
+                    if "FAILED" not in output.stdout:
+                        print(f"\nYour unlock code is: {value}")
+                        print(f"Saving unlock code to {devfile}...")
+                        save_progress(device, value)
+                        return  # Exit if unlock code is found
 
-# Initialize the value string
-value = ""
-
-# Check if device is in bootloader mode
-if not is_bootloader(device):
-    print(f"Device {device} is not in bootloader mode. Exiting...")
-    exit()
-
-# Load progress if file exists
-value = load_progress(device)
-if value:
-    # Get the index of the current value in the alphabet array
-    index = alphabet.index(value)
-else:
-    # Initialize the index to the minimum value
-    index = min_code
-
-# Check if device is in "UNLOCK THE BOOTLOADER" screen
-while True:
-    # Display progress bar
-    progress_bar(device, value, index, len(alphabet))
-
-    # Check if device is in "UNLOCK THE BOOTLOADER" screen
-    if is_unlock_screen(device):
-        # Try to unlock device with fastboot
-        output = subprocess.run(["fastboot", "oem", "unlock", value], capture_output=True, text=True)
-
-        # Check if unlock code was found
-        if "FAILED" not in output:
-            print(f"\nYour unlock code is: {value}")
-            print(f"Saving unlock code to {devfile}...")
-            save_progress(device, value)
-            break
-
-    # Increment value for next try
-    index += step
-
-    # Set the value to the next character in the alphabet array
-    if index < 0:
-        index = max_code
-    elif index > max_code:
-        index = min_code
-    value = alphabet[index]
+if __name__ == "__main__":
+    main()
