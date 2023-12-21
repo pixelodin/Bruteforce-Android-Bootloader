@@ -1,7 +1,27 @@
-# Bruteforce-Android-Bootloader
-Bruteforce Bootloader Unlocker for android smartphones with fastboot support. 
+## Script Description: Unlock Bootloader Automation
 
-This is a bash script that tries to unlock the bootloader of Android devices using fastboot.
+# Overview:
+This Python script automates the exploration of all possible combinations of alphanumeric characters to find the unlock code for the bootloader of an Android device. It utilizes the fastboot utility, a command-line tool used in Android development, to interact with the device and attempt to unlock its bootloader.
+
+# Key Components:
+
+    Character Set: The script employs a character set that includes numbers (0-9), lowercase letters (a-z), and uppercase letters (A-Z). This set forms the basis for generating combinations to be tested as potential unlock codes.
+
+    Combination Generation: Using the itertools.product function, the script generates combinations of characters of varying lengths within a specified range. It systematically explores these combinations in an attempt to discover the correct unlock code.
+
+    Progress Monitoring: The script features a progress bar that dynamically updates, providing real-time feedback on the current combination being tested and the overall progress in the search for the unlock code.
+
+    Optimizations for Speed: Several optimizations, including the use of a set to track tried combinations and periodic progress bar updates, aim to enhance the script's speed and efficiency.
+
+    Unlock Attempt: For each generated combination, the script checks whether the device's bootloader allows unlocking. If allowed, it utilizes the fastboot utility to attempt unlocking with the current combination. If successful, the script prints the discovered unlock code and saves it.
+
+# Execution:
+To execute the script, the user needs to have a connected Android device in fastboot mode and the fastboot utility installed. The script explores all possible combinations systematically, and its runtime may vary based on the length of the combinations and the device's unlockability.
+
+# Note:
+Unlocking the bootloader is a crucial step in Android development but should be performed with caution. It often involves erasing the device's data, and unauthorized unlocking may void the device's warranty. Users should refer to the device manufacturer's guidelines and understand the implications before attempting such actions.
+
+This script is essentially a tool for automating the exploration of potential unlock codes, demonstrating a common practice in Android device development. Users should exercise caution and adhere to ethical considerations when using such scripts.
 
 ## Requirements
 
